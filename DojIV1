@@ -48,10 +48,10 @@ all_sell_conditions = is_bearish_trend and rsi_break_below and is_doji
 
 // === Visual Labels ===
 if all_buy_conditions
-    label.new(bar_index, low - tr * 1.5, "3 Buy", style=label.style_label_up, color=color.green, textcolor=color.white, size=size.small)
+    label.new(bar_index, low - tr * 1.5, "Buy", style=label.style_label_up, color=color.green, textcolor=color.white, size=size.small)
 
 if all_sell_conditions
-    label.new(bar_index, high + tr * 1.5, "3 Sell", style=label.style_label_down, color=color.red, textcolor=color.white, size=size.small)
+    label.new(bar_index, high + tr * 1.5, "Sell", style=label.style_label_down, color=color.red, textcolor=color.white, size=size.small)
 
 // === Plot/Visuals for Reference ===
 plotshape(ta.crossover(ma_short, ma_long), title="MA Cross Up", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
