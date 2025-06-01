@@ -1,0 +1,105 @@
+//@version=5
+indicator("Combined 3 Indicator Signal with Time Zones and Doji", overlay=true)
+
+// === TIME RANGE INPUTS ===
+startHour1 = input.int(11, "Start Hour 1", minval=0, maxval=23)
+startMinute1 = input.int(30, "Start Minute 1", minval=0, maxval=59)
+endHour1 = input.int(14, "End Hour 1", minval=0, maxval=23)
+endMinute1 = input.int(30, "End Minute 1", minval=0, maxval=59)
+
+startHour2 = input.int(14, "Start Hour 2", minval=0, maxval=23)
+startMinute2 = input.int(30, "Start Minute 2", minval=0, maxval=59)
+endHour2 = input.int(18, "End Hour 2", minval=0, maxval=23)
+endMinute2 = input.int(0, "End Minute 2", minval=0, maxval=59)
+
+startHour3 = input.int(21, "Start Hour 3", minval=0, maxval=23)
+startMinute3 = input.int(0, "Start Minute 3", minval=0, maxval=59)
+endHour3 = input.int(23, "End Hour 3", minval=0, maxval=23)
+endMinute3 = input.int(30, "End Minute 3", minval=0, maxval=59)
+
+color1 = input.color(color.orange, "Time Range 1 Color")
+color2 = input.color(color.white, "Time Range 2 Color")
+color3 = input.color(color.lime, "Time Range 3 Color")
+opacity = input.int(90, "Opacity", minval=0, maxval=100)
+
+// === TIME CHECK LOGIC ===
+isInTimeRange1 = (hour > startHour1 or (hour == startHour1 and minute >= startMinute1)) and
+                 (hour < endHour1 or (hour == endHour1 and minute < endMinute1))
+isInTimeRange2 = (hour > startHour2 or (hour == startHour2 and minute >= startMinute2)) and
+                 (hour < endHour2 or (hour == endHour2 and minute < endMinute2))
+isInTimeRange3 = (hour > startHour3 or (hour == startHour3 and minute >= startMinute3)) and
+                 (hour < endHour3 or (hour == endHour3 and minute < endMinute3))
+
+bgcolor(isInTimeRange1 ? color.new(color1, opacity) : na)
+bgcolor(isInTimeRange2 ? color.new(color2, opacity) : na)
+bgcolor(isInTimeRange3 ? color.new(color3, opacity) : na)
+
+// === INDICATOR INPUTS ===
+// RSI
+rsi_length = input.int(14, "RSI Length")
+rsi_source = input.source(close, "RSI Source")
+
+// MA
+ma_short_len = input.int(9, "Short MA Length")
+ma_long_len = input.int(21, "Long MA Length")
+short_ma_color = input.color(color.teal, "Short MA Color")
+long_ma_color = input.color(color.orange, "Long MA Color")
+
+// Doji
+doji_body_threshold  = input.float(25.0, title="Doji Max Body %", minval=0.1)
+wick_ratio_threshold = input.float(1.0, title="Wick-to-Body Ratio (Min)", minval=0.1)
+
+// === RSI LOGIC ===
+rsi = ta.rsi(rsi_source, rsi_length)
+rsi_mid = ta.sma(rsi, rsi_length)
+rsi_break_above = rsi > rsi_mid
+rsi_break_below = rsi < rsi_mid
+
+// === MA TREND ===
+ma_short = ta.sma(close, ma_short_len)
+ma_long = ta.sma(close, ma_long_len)
+is_bullish_trend = ma_short > ma_long
+is_bearish_trend = ma_short < ma_long
+
+// === DOJI DETECTION ===
+body         = math.abs(close - open)
+candle_range = high - low
+upper_wick   = high - math.max(open, close)
+lower_wick   = math.min(open, close) - low
+body_percent = candle_range > 0 ? (body / candle_range) * 100 : na
+tr = ta.tr(true)
+
+is_doji = body_percent <= doji_body_threshold and upper_wick > 0 and lower_wick > 0
+is_dragonfly_doji  = is_doji and upper_wick < body * 1.5 and lower_wick > body * wick_ratio_threshold
+is_gravestone_doji = is_doji and lower_wick < body * 1.5 and upper_wick > body * wick_ratio_threshold
+
+// === CONDITIONS ===
+all_buy_conditions = is_bullish_trend and rsi_break_above and is_doji
+all_sell_conditions = is_bearish_trend and rsi_break_below and is_doji
+
+// === LABELS ===
+if all_buy_conditions
+    label.new(bar_index, low - tr * 1.5, "Buy", style=label.style_label_up, color=color.green, textcolor=color.white, size=size.small)
+
+if all_sell_conditions
+    label.new(bar_index, high + tr * 1.5, "Sell", style=label.style_label_down, color=color.red, textcolor=color.white, size=size.small)
+    
+// === PLOTS ===
+plotshape(ta.crossover(ma_short, ma_long), title="MA Cross Up", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(ta.crossunder(ma_short, ma_long), title="MA Cross Down", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)
+plotshape(rsi_break_above, title="RSI Break Above", location=location.bottom, color=color.blue, style=shape.circle, size=size.tiny)
+plotshape(rsi_break_below, title="RSI Break Below", location=location.top, color=color.orange, style=shape.circle, size=size.tiny)
+
+if is_dragonfly_doji
+    label.new(bar_index, low - tr * 0.5, "🔥", style=label.style_label_up, color=color.green, size=size.tiny, textcolor=color.white)
+if is_gravestone_doji
+    label.new(bar_index, high + tr * 0.5, "💀", style=label.style_label_down, color=color.red, size=size.tiny, textcolor=color.white)
+if is_doji and not is_dragonfly_doji and not is_gravestone_doji
+    label.new(bar_index, high + tr * 0.5, "Doji", style=label.style_label_down, color=color.fuchsia, size=size.tiny, textcolor=color.white)
+
+plot(ma_short, title="Short MA (9)", color=short_ma_color, linewidth=2)
+plot(ma_long, title="Long MA (21)", color=long_ma_color, linewidth=2)
+
+// === ALERTS ===
+alertcondition(all_buy_conditions, title="3 Indicator Buy Signal", message="Buy")
+alertcondition(all_sell_conditions, title="3 Indicator Sell Signal", message="Sell")
