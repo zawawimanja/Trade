@@ -1,8 +1,8 @@
 //@version=5
-indicator("Doji V1", overlay=true)
+indicator("Doji", overlay=true)
 
 // === TIME RANGE INPUTS ===
-startHour1 = input.int(11, "Start Hour 1", minval=0, maxval=23)
+startHour1 = input.int(10, "Start Hour 1", minval=0, maxval=23)
 startMinute1 = input.int(30, "Start Minute 1", minval=0, maxval=59)
 endHour1 = input.int(14, "End Hour 1", minval=0, maxval=23)
 endMinute1 = input.int(30, "End Minute 1", minval=0, maxval=59)
@@ -17,9 +17,9 @@ startMinute3 = input.int(0, "Start Minute 3", minval=0, maxval=59)
 endHour3 = input.int(23, "End Hour 3", minval=0, maxval=23)
 endMinute3 = input.int(30, "End Minute 3", minval=0, maxval=59)
 
-color1 = input.color(color.orange, "Time Range 1 Color")
-color2 = input.color(color.white, "Time Range 2 Color")
-color3 = input.color(color.lime, "Time Range 3 Color")
+color1 = input.color(color.white, "Time Range 1 Color")
+color2 = input.color(color.orange, "Time Range 2 Color")
+color3 = input.color(color.black, "Time Range 3 Color")
 opacity = input.int(90, "Opacity", minval=0, maxval=100)
 
 // === TIME CHECK LOGIC ===
