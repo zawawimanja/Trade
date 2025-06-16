@@ -15,12 +15,15 @@ isInTimeRange2 = (hour > startHour2 or (hour == startHour2 and minute >= startMi
 
 bgcolor(isInTimeRange2 ? color.new(color2, opacity) : na)
 
-// === MA Calculation ===
+// === MA Calculation with Manual Colors ===
+ma9_color = input.color(color.yellow, "MA 9 Color")
+ma21_color = input.color(color.aqua, "MA 21 Color")
+
 ma9 = ta.sma(close, 9)
 ma21 = ta.sma(close, 21)
 
-plot(ma9, title="MA 9", color=color.yellow, linewidth=2)
-plot(ma21, title="MA 21", color=color.aqua, linewidth=2)
+plot(ma9, title="MA 9", color=ma9_color, linewidth=2)
+plot(ma21, title="MA 21", color=ma21_color, linewidth=2)
 
 // === Volume and Candle Check ===
 vol_threshold = input.int(1000, "Min Volume")
@@ -35,11 +38,11 @@ isNotTF5 = timeframe.period != "5"
 
 if ta.crossover(ma9, ma21) and isNotTF5
     trendState := "buy"
-    label.new(bar_index, low - tr * 2, "MA Cross Buy", style=label.style_label_up, color=color.teal, textcolor=color.white, size=size.small)
+    label.new(bar_index, low - tr * 2, "MA Buy", style=label.style_label_up, color=color.teal, textcolor=color.white, size=size.small)
 
 if ta.crossunder(ma9, ma21) and isNotTF5
     trendState := "sell"
-    label.new(bar_index, high + tr * 2, "MA Cross Sell", style=label.style_label_down, color=color.maroon, textcolor=color.white, size=size.small)
+    label.new(bar_index, high + tr * 2, "MA Sell", style=label.style_label_down, color=color.maroon, textcolor=color.white, size=size.small)
 
 // === Buy/Sell Signal (based on current trendState) ===
 if trendState == "buy" and isInTimeRange2 and isGreen and volume > vol_threshold
