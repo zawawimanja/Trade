@@ -1,0 +1,84 @@
+//@version=5
+indicator("Doji Mid + MA Trend Only", overlay=true)
+
+// === TIME RANGE INPUTS ===
+startHour1 = input.int(10, "Start Hour 1", minval=0, maxval=23)
+startMinute1 = input.int(30, "Start Minute 1", minval=0, maxval=59)
+endHour1 = input.int(14, "End Hour 1", minval=0, maxval=23)
+endMinute1 = input.int(30, "End Minute 1", minval=0, maxval=59)
+
+startHour2 = input.int(14, "Start Hour 2", minval=0, maxval=23)
+startMinute2 = input.int(30, "Start Minute 2", minval=0, maxval=59)
+endHour2 = input.int(18, "End Hour 2", minval=0, maxval=23)
+endMinute2 = input.int(0, "End Minute 2", minval=0, maxval=59)
+
+startHour3 = input.int(21, "Start Hour 3", minval=0, maxval=23)
+startMinute3 = input.int(0, "Start Minute 3", minval=0, maxval=59)
+endHour3 = input.int(23, "End Hour 3", minval=0, maxval=23)
+endMinute3 = input.int(30, "End Minute 3", minval=0, maxval=59)
+
+color1 = input.color(color.white, "Time Range 1 Color")
+color2 = input.color(color.orange, "Time Range 2 Color")
+color3 = input.color(color.black, "Time Range 3 Color")
+opacity = input.int(90, "Opacity", minval=0, maxval=100)
+
+// === TIME LOGIC ===
+isInTimeRange1 = (hour > startHour1 or (hour == startHour1 and minute >= startMinute1)) and (hour < endHour1 or (hour == endHour1 and minute < endMinute1))
+isInTimeRange2 = (hour > startHour2 or (hour == startHour2 and minute >= startMinute2)) and (hour < endHour2 or (hour == endHour2 and minute < endMinute2))
+isInTimeRange3 = (hour > startHour3 or (hour == startHour3 and minute >= startMinute3)) and (hour < endHour3 or (hour == endHour3 and minute < endMinute3))
+
+bgcolor(isInTimeRange1 ? color.new(color1, opacity) : na)
+bgcolor(isInTimeRange2 ? color.new(color2, opacity) : na)
+bgcolor(isInTimeRange3 ? color.new(color3, opacity) : na)
+
+// === MA LOGIC ===
+ma_short_len = input.int(9, "Short MA Length")
+ma_long_len = input.int(21, "Long MA Length")
+ma_short = ta.sma(close, ma_short_len)
+ma_long = ta.sma(close, ma_long_len)
+is_bullish_trend = ma_short > ma_long
+is_bearish_trend = ma_short < ma_long
+
+// === DOJI LOGIC ===
+doji_body_threshold = input.float(25.0, "Doji Max Body %", minval=0.1)
+wick_ratio_threshold = input.float(1.0, "Wick-to-Body Ratio (Min)", minval=0.1)
+body = math.abs(close - open)
+candle_range = high - low
+upper_wick = high - math.max(open, close)
+lower_wick = math.min(open, close) - low
+body_percent = candle_range > 0 ? (body / candle_range) * 100 : na
+tr = ta.tr(true)
+
+is_doji = body_percent <= doji_body_threshold and upper_wick > 0 and lower_wick > 0 and isInTimeRange2
+is_dragonfly_doji = is_doji and upper_wick < body * 1.5 and lower_wick > body * wick_ratio_threshold
+is_gravestone_doji = is_doji and lower_wick < body * 1.5 and upper_wick > body * wick_ratio_threshold
+
+// === STRATEGY CONDITIONS ===
+all_buy_conditions = is_bullish_trend and is_doji
+all_sell_conditions = is_bearish_trend and is_doji
+
+// === TIMEFRAME DETECTION ===
+isTF5 = timeframe.period == "5"
+
+// === LABELS ===
+if isTF5 and all_buy_conditions
+    label.new(bar_index, low - tr * 1.5, "B", style=label.style_label_up, color=color.green, textcolor=color.white, size=size.small)
+if isTF5 and all_sell_conditions
+    label.new(bar_index, high + tr * 1.5, "S", style=label.style_label_down, color=color.red, textcolor=color.white, size=size.small)
+if isTF5 and is_dragonfly_doji
+    label.new(bar_index, low - tr * 0.5, "🔥", style=label.style_label_up, color=color.green, size=size.tiny, textcolor=color.white)
+if isTF5 and is_gravestone_doji
+    label.new(bar_index, high + tr * 0.5, "💀", style=label.style_label_down, color=color.red, size=size.tiny, textcolor=color.white)
+if isTF5 and is_doji and not is_dragonfly_doji and not is_gravestone_doji
+    label.new(bar_index, high + tr * 0.5, "DJ", style=label.style_label_down, color=color.fuchsia, size=size.tiny, textcolor=color.white)
+
+// === PLOTS ===
+plot(ma_short, title="Short MA (9)", color=color.teal, linewidth=2)
+plot(ma_long, title="Long MA (21)", color=color.orange, linewidth=2)
+
+plotshape(ta.crossover(ma_short, ma_long), title="MA Cross Up", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(ta.crossunder(ma_short, ma_long), title="MA Cross Down", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)
+
+// === ALERTS ===
+alertcondition(all_buy_conditions, title="Buy Signal (MA + Doji)", message="Buy signal confirmed")
+alertcondition(all_sell_conditions, title="Sell Signal (MA + Doji)", message="Sell signal confirmed")
