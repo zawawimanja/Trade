@@ -1,0 +1,120 @@
+//@version=6
+indicator("Breakout Sell Signal with SL1, SL2, and TP1-TP4", overlay=true)
+
+// === Input ===
+sellEntry = input.float(4314, "Sell Entry Price", step=1)
+rsiLength = input.int(14, "RSI Length")
+smoothingLength = input.int(14, "RSI Smoothing Length")
+maLength = input.int(9, "MA9 Length")
+sl2Ticks = input.int(10, "SL2 Ticks (above Entry)", minval=1)
+tpIncrement = input.int(10, "TP Increment (ticks)", minval=1)
+
+// === Indicators ===
+rsi = ta.rsi(close, rsiLength)
+rsiSmoothing = ta.sma(rsi, smoothingLength)
+ma9 = ta.sma(close, maLength)
+
+// === Levels ===
+sl2Level = sellEntry + sl2Ticks
+tp1 = sellEntry - tpIncrement * 1
+tp2 = sellEntry - tpIncrement * 2
+tp3 = sellEntry - tpIncrement * 3
+tp4 = sellEntry - tpIncrement * 4
+
+// === Raw Conditions ===
+priceBreakBelow = close < sellEntry
+notBreakAboveMA9 = high < ma9
+rsiBelowSmooth = rsi < rsiSmoothing
+
+rawSellCondition = priceBreakBelow and notBreakAboveMA9
+rawSL1Condition = close > ma9 and rsi > rsiSmoothing
+rawSL2Condition = close > sl2Level
+
+// === Trade State ===
+var bool inTrade = false
+var bool slTriggered = false
+var bool sl2LabelDrawn = false
+var bool tpLabelsDrawn = false
+var bool tp1Hit = false
+var bool tp2Hit = false
+var bool tp3Hit = false
+var bool tp4Hit = false
+
+// === Reset Condition ===
+resetCondition = close > sellEntry * 1.01
+if resetCondition
+    slTriggered := false
+    inTrade := false
+    sl2LabelDrawn := false
+    tpLabelsDrawn := false
+    tp1Hit := false
+    tp2Hit := false
+    tp3Hit := false
+    tp4Hit := false
+
+// === Sell Logic ===
+sellCondition = rawSellCondition and not slTriggered
+if sellCondition
+    inTrade := true
+    slTriggered := false
+
+// === SL1 and SL2 Logic ===
+sl1Condition = inTrade and not slTriggered and rawSL1Condition
+sl2Condition = inTrade and not slTriggered and rawSL2Condition
+
+// === Trigger SL
+if sl1Condition or sl2Condition
+    slTriggered := true
+    inTrade := false
+
+// === TP Hit Conditions (One-time Labels with vertical offset)
+if inTrade and not tp1Hit and close <= tp1
+    label.new(bar_index, tp1 - syminfo.mintick * 10, text="TP1 HIT", style=label.style_label_up, color=color.blue, textcolor=color.white, size=size.small, yloc=yloc.price)
+    tp1Hit := true
+
+if inTrade and not tp2Hit and close <= tp2
+    label.new(bar_index, tp2 - syminfo.mintick * 12, text="TP2 HIT", style=label.style_label_up, color=color.blue, textcolor=color.white, size=size.small, yloc=yloc.price)
+    tp2Hit := true
+
+if inTrade and not tp3Hit and close <= tp3
+    label.new(bar_index, tp3 - syminfo.mintick * 14, text="TP3 HIT", style=label.style_label_up, color=color.blue, textcolor=color.white, size=size.small, yloc=yloc.price)
+    tp3Hit := true
+
+if inTrade and not tp4Hit and close <= tp4
+    label.new(bar_index, tp4 - syminfo.mintick * 16, text="TP4 HIT", style=label.style_label_up, color=color.blue, textcolor=color.white, size=size.small, yloc=yloc.price)
+    tp4Hit := true
+
+// === Plotting Levels
+plot(sellEntry, title="Entry Level", color=color.blue, linewidth=1, style=plot.style_line)
+plot(sl2Level, title="SL2 Level", color=color.red, linewidth=1, style=plot.style_linebr)
+plot(tp1, title="TP1", color=color.green, linewidth=1, style=plot.style_line)
+plot(tp2, title="TP2", color=color.green, linewidth=1, style=plot.style_line)
+plot(tp3, title="TP3", color=color.green, linewidth=1, style=plot.style_line)
+plot(tp4, title="TP4", color=color.green, linewidth=1, style=plot.style_line)
+
+// === Labels
+plotshape(sellCondition, title="Sell Signal", location=location.abovebar,
+     style=shape.labeldown, color=color.red, text="S", textcolor=color.white, size=size.normal)
+
+plotshape(sl1Condition, title="SL1 Hit", location=location.belowbar,
+     style=shape.labelup, color=color.green, text="SL1", textcolor=color.white)
+
+plotshape(sl2Condition, title="SL2 Hit", location=location.belowbar,
+     style=shape.labelup, color=color.green, text="SL2", textcolor=color.white, size=size.normal)
+
+// === Draw SL2 + TP Labels Once
+if sellCondition and not sl2LabelDrawn
+    label.new(bar_index, sl2Level + syminfo.mintick * 10, text="SL2", style=label.style_label_left, color=color.green, textcolor=color.white, size=size.normal)
+    sl2LabelDrawn := true
+
+if sellCondition and not tpLabelsDrawn
+    label.new(bar_index, tp1 - syminfo.mintick , text="TP1", style=label.style_label_left, yloc=yloc.price, color=color.red, textcolor=color.white, size=size.small)
+    label.new(bar_index, tp2 - syminfo.mintick , text="TP2", style=label.style_label_left, yloc=yloc.price, color=color.red, textcolor=color.white,size=size.small)
+    label.new(bar_index, tp3 - syminfo.mintick , text="TP3", style=label.style_label_left, yloc=yloc.price, color=color.red, textcolor=color.white, size=size.small)
+    label.new(bar_index, tp4 - syminfo.mintick , text="TP4", style=label.style_label_left, yloc=yloc.price, color=color.red, textcolor=color.white, size=size.small)
+    tpLabelsDrawn := true
+
+// === Alerts
+alertcondition(sellCondition, title="Sell Signal Alert", message="Breakout Sell Signal triggered")
+alertcondition(sl1Condition, title="SL1 Alert", message="Stop Loss 1 triggered (above MA9 + RSI)")
+alertcondition(sl2Condition, title="SL2 Alert", message="Stop Loss 2 triggered (entry + buffer)")
