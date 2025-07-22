@@ -1,0 +1,21 @@
+//@version=6
+indicator("Breakout Close Detector", overlay=true)
+
+// === Input breakout levels ===
+breakoutLevelUp = input.float(4314, title="Breakout Level (Up)", step=0.1)
+breakoutLevelDown = input.float(4300, title="Breakout Level (Down)", step=0.1)
+
+// === Breakout conditions ===
+breakoutUp = close > breakoutLevelUp and close[1] <= breakoutLevelUp
+breakoutDown = close < breakoutLevelDown and close[1] >= breakoutLevelDown
+
+// === Plot breakout lines
+plot(breakoutLevelUp, title="Breakout Level (Up)", color=color.green, linewidth=1, style=plot.style_line)
+plot(breakoutLevelDown, title="Breakout Level (Down)", color=color.red, linewidth=1, style=plot.style_line)
+
+// === Labels on breakout candles
+if breakoutUp
+    label.new(bar_index, high, text="B↑", style=label.style_label_down, color=color.green, textcolor=color.white, yloc=yloc.abovebar)
+
+if breakoutDown
+    label.new(bar_index, low, text="B↓", style=label.style_label_up, color=color.red, textcolor=color.white, yloc=yloc.belowbar)
