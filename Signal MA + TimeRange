@@ -1,0 +1,59 @@
+//@version=5
+indicator("Signal", overlay=true)
+
+// === TIME RANGE INPUTS ===
+startHour1 = input.int(10, "Start Hour 1", minval=0, maxval=23)
+startMinute1 = input.int(30, "Start Minute 1", minval=0, maxval=59)
+endHour1 = input.int(14, "End Hour 1", minval=0, maxval=23)
+endMinute1 = input.int(30, "End Minute 1", minval=0, maxval=59)
+
+startHour2 = input.int(14, "Start Hour 2", minval=0, maxval=23)
+startMinute2 = input.int(30, "Start Minute 2", minval=0, maxval=59)
+endHour2 = input.int(18, "End Hour 2", minval=0, maxval=23)
+endMinute2 = input.int(0, "End Minute 2", minval=0, maxval=59)
+
+startHour3 = input.int(21, "Start Hour 3", minval=0, maxval=23)
+startMinute3 = input.int(0, "Start Minute 3", minval=0, maxval=59)
+endHour3 = input.int(23, "End Hour 3", minval=0, maxval=23)
+endMinute3 = input.int(30, "End Minute 3", minval=0, maxval=59)
+
+color1 = input.color(color.white, "Time Range 1 Color")
+color2 = input.color(color.orange, "Time Range 2 Color")
+color3 = input.color(color.black, "Time Range 3 Color")
+opacity = input.int(90, "Opacity", minval=0, maxval=100)
+
+// === TIME LOGIC ===
+isInTimeRange1 = (hour > startHour1 or (hour == startHour1 and minute >= startMinute1)) and (hour < endHour1 or (hour == endHour1 and minute < endMinute1))
+isInTimeRange2 = (hour > startHour2 or (hour == startHour2 and minute >= startMinute2)) and (hour < endHour2 or (hour == endHour2 and minute < endMinute2))
+isInTimeRange3 = (hour > startHour3 or (hour == startHour3 and minute >= startMinute3)) and (hour < endHour3 or (hour == endHour3 and minute < endMinute3))
+
+bgcolor(isInTimeRange1 ? color.new(color1, opacity) : na)
+bgcolor(isInTimeRange2 ? color.new(color2, opacity) : na)
+bgcolor(isInTimeRange3 ? color.new(color3, opacity) : na)
+
+// === MA LOGIC ===
+ma_short_len = input.int(9, "Short MA Length")
+ma_long_len = input.int(21, "Long MA Length")
+// === MA COLOR INPUTS ===
+ma_short_color = input.color(color.teal, "Short MA Color", group="MA Colors")
+ma_long_color = input.color(color.orange, "Long MA Color", group="MA Colors")
+
+ma_short = ta.sma(close, ma_short_len)
+ma_long = ta.sma(close, ma_long_len)
+is_bullish_trend = ma_short > ma_long
+is_bearish_trend = ma_short < ma_long
+
+// === TIMEFRAME DETECTION ===
+isTF5 = timeframe.period == "5"
+isTF1 = timeframe.period == "1"
+
+// === PLOTS ===
+plot(ma_short, title="Short MA (9)", color=ma_short_color, linewidth=2)
+plot(ma_long, title="Long MA (21)", color=ma_long_color, linewidth=2)
+
+plotshape(not isTF1 and ta.crossover(ma_short, ma_long), title="MA Cross Up", location=location.belowbar, color=color.green, style=shape.triangleup, size=size.small)
+plotshape(not isTF1 and ta.crossunder(ma_short, ma_long), title="MA Cross Down", location=location.abovebar, color=color.red, style=shape.triangledown, size=size.small)
+
+// === ALERTS ===
+alertcondition(ta.crossover(ma_short, ma_long), title="MA Cross Up", message="MA crossover up signal")
+alertcondition(ta.crossunder(ma_short, ma_long), title="MA Cross Down", message="MA crossover down signal")
